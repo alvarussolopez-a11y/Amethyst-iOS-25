@@ -32,7 +32,7 @@ int memorystatus_control(uint32_t command, int32_t pid, uint32_t flags, void *bu
 static int currentHotbarSlot = -1;
 static GameSurfaceView* pojavWindow;
 
-@interface SurfaceViewController ()<UITextFieldDelegate, UIGestureRecognizerDelegate> {
+@interface SurfaceViewController ()<UITextFieldDelegate, UIGestureRecognizerDelegate, UIPointerInteractionDelegate> {
 }
 
 @property(nonatomic) NSDictionary* metadata;
@@ -125,7 +125,12 @@ static GameSurfaceView* pojavWindow;
     self.touchView.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:1];
     self.touchView.multipleTouchEnabled = YES;
     [self.touchView addSubview:self.surfaceView];
-
+    
+    if (@available(iOS 13.4, *)) {
+    UIPointerInteraction *pointerInteraction =
+        [[UIPointerInteraction alloc] initWithDelegate:self];
+    [self.touchView addInteraction:pointerInteraction];
+}
     [self.rootView addSubview:self.touchView];
     [self.rootView addSubview:self.ctrlView];
 
@@ -673,21 +678,32 @@ static GameSurfaceView* pojavWindow;
 }
 
 - (void)pressesBegan:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event {
+    BOOL handled = NO;
+
     for (UIPress *press in presses) {
-        if (press.key != nil) {
-            [KeyboardInput sendKeyEvent:press.key down:YES];
+        if (press.key != nil && [KeyboardInput sendKeyEvent:press.key down:YES]) {
+            handled = YES;
         }
     }
-    // Always call super so that inputTextField (UITextInput) can receive
-    // key events for text input (e.g., Minecraft chat).
-    [super pressesBegan:presses withEvent:event];
+
+    if (!handled) {
+        [super pressesBegan:presses withEvent:event];
+    }
 }
 
 - (void)pressesEnded:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event {
+    BOOL handled = NO;
+
     for (UIPress *press in presses) {
-        if (press.key != nil) {
-            [KeyboardInput sendKeyEvent:press.key down:NO];
+        if (press.key != nil && [KeyboardInput sendKeyEvent:press.key down:NO]) {
+            handled = YES;
         }
+    }
+
+    if (!handled) {
+        [super pressesEnded:presses withEvent:event];
+    }
+}
     }
     // Always call super so that inputTextField (UITextInput) can receive
     // key-up events properly.
@@ -1101,5 +1117,9 @@ int touchesMovedCount;
 + (GameSurfaceView *)surface {
     return pojavWindow;
 }
-
+- (UIPointerStyle *)pointerInteraction:(UIPointerInteraction *)interaction
+                       styleForRegion:(UIPointerRegion *)region
+                       API_AVAILABLE(ios(13.4)) {
+    return [UIPointerStyle hiddenPointerStyle];
+}
 @end
