@@ -85,10 +85,19 @@ jobs:
 
           SIGN_FLAGS="CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="
 
-          # WARNING MITIGATION: Filter runtime stderr streams to suppress repetitive upstream vtool signature warnings
-          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=2 $SIGN_FLAGS 2> >(grep -v "vtool warning: code signature will be invalid" >&2)
-          
-          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=2 TROLLSTORE_JIT_ENT=1 $SIGN_FLAGS 2> >(grep -v "vtool warning: code signature will be invalid" >&2)
+          # WARNING MITIGATION: Filter runtime stderr streams to suppress repetitive upstream vtool signature set -x
+
+echo "===== PRIMER GMК: SIDeload IPA ====="
+gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=2 $SIGN_FLAGS
+FIRST_EXIT=$?
+echo "===== PRIMER GMAKE EXIT CODE: $FIRST_EXIT ====="
+
+echo "===== SEGUNDO GMAKE: TROLLSTORE IPA ====="
+gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=2 TROLLSTORE_JIT_ENT=1 $SIGN_FLAGS
+SECOND_EXIT=$?
+echo "===== SEGUNDO GMAKE EXIT CODE: $SECOND_EXIT ====="
+
+exit $SECOND_EXIT
 
       - name: List artifacts
         if: always()
